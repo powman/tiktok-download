@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TikTok Processor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #010101;
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .card {
+      background: #1a1a1a;
+      border-radius: 16px;
+      padding: 40px;
+      width: 100%;
+      max-width: 520px;
+      box-shadow: 0 0 40px rgba(254,44,85,0.3);
+    }
+    h1 { text-align: center; font-size: 1.8rem; margin-bottom: 8px; color: #fe2c55; }
+    p.subtitle { text-align: center; color: #aaa; margin-bottom: 28px; font-size: 0.9rem; }
+    label { display: block; font-size: 0.85rem; color: #aaa; margin-bottom: 6px; margin-top: 16px; }
+    label span { color: #fe2c55; }
+    input[type=text], input[type=file] {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid #333;
+      background: #111;
+      color: #fff;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border 0.2s;
+    }
+    input[type=text]:focus { border-color: #fe2c55; }
+    input[type=file] { padding: 10px; cursor: pointer; }
+    .badge-optional {
+      display: inline-block;
+      font-size: 0.7rem;
+      background: #333;
+      color: #aaa;
+      padding: 2px 8px;
+      border-radius: 20px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      border: none;
+      background: #fe2c55;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: 24px;
+    }
+    button:hover { background: #e0253e; }
+    button:disabled { background: #555; cursor: not-allowed; }
+    #status {
+      margin-top: 20px;
+      padding: 14px;
+      border-radius: 10px;
+      background: #111;
+      font-size: 0.9rem;
+      display: none;
+      text-align: center;
+      line-height: 1.6;
+    }
+    #status.error { border: 1px solid #fe2c55; color: #fe2c55; }
+    #status.success { border: 1px solid #25f4ee; color: #25f4ee; }
+    #status.pending { border: 1px solid #aaa; color: #aaa; }
+    #caption-box {
+      display: none;
+      margin-top: 16px;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 14px;
+    }
+    #caption-box h3 { font-size: 0.85rem; color: #aaa; margin-bottom: 8px; }
+    #caption-text {
+      font-size: 0.85rem;
+      color: #ccc;
+      white-space: pre-wrap;
+      max-height: 120px;
+      overflow-y: auto;
+    }
+    .copy-btn {
+      margin-top: 8px;
+      padding: 6px 14px;
+      border-radius: 8px;
+      background: #25f4ee;
+      color: #000;
+      border: none;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: bold;
+      width: auto;
+    }
+    .loader {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 3px solid #555;
+      border-top-color: #fe2c55;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #extract-status {
+      margin-top: 12px;
+      padding: 14px;
+      border-radius: 10px;
+      background: #111;
+      font-size: 0.9rem;
+      display: none;
+      text-align: center;
+      line-height: 1.6;
+    }
+    #extract-status.error { border: 1px solid #fe2c55; color: #fe2c55; }
+    #extract-status.success { border: 1px solid #25f4ee; color: #25f4ee; }
+    #extract-status.pending { border: 1px solid #aaa; color: #aaa; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <!-- Seção de Extração de Informações -->
+    <div id="extract-section" style="margin-bottom: 40px; padding-bottom: 30px; border-bottom: 1px solid #333;">
+      <h2 style="font-size: 1.3rem; margin-bottom: 16px; color: #25f4ee;">📥 Extrair Informações</h2>
+
+      <label>URL do TikTok <span>*</span></label>
+      <input type="text" id="extractUrlInput" placeholder="https://www.tiktok.com/@user/video/..." />
+
+      <button id="extractBtn" onclick="extractVideoInfo()" style="margin-top: 16px;">🔍 Buscar Informações</button>
+
+      <div id="extract-status"></div>
+
+      <div id="info-box" style="display: none; margin-top: 20px; background: #111; border: 1px solid #25f4ee; border-radius: 10px; padding: 16px;">
+        <div style="margin-bottom: 16px;">
+          <h4 style="font-size: 0.85rem; color: #aaa; margin-bottom: 8px;">📝 Título</h4>
+          <div id="info-title" style="font-size: 0.9rem; color: #ccc; padding: 10px; background: #0a0a0a; border-radius: 6px; border-left: 3px solid #25f4ee; white-space: pre-wrap; max-height: 100px; overflow-y: auto;"></div>
+          <button class="copy-btn" onclick="copyText('info-title')" style="margin-top: 8px;">Copiar título</button>
+        </div>
+
+        <div>
+          <h4 style="font-size: 0.85rem; color: #aaa; margin-bottom: 8px;">📋 Descrição</h4>
+          <div id="info-description" style="font-size: 0.9rem; color: #ccc; padding: 10px; background: #0a0a0a; border-radius: 6px; border-left: 3px solid #25f4ee; white-space: pre-wrap; max-height: 150px; overflow-y: auto;"></div>
+          <button class="copy-btn" onclick="copyText('info-description')" style="margin-top: 8px;">Copiar descrição</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Seção de Processamento de Vídeo -->
+    <h1>🎵 TikTok Processor</h1>
+    <p class="subtitle">Baixe e processe vídeos com efeito Pillarbox Blur, watermark e overlay de reação</p>
+
+    <label>URL do TikTok <span>*</span></label>
+    <input type="text" id="urlInput" placeholder="https://www.tiktok.com/@user/video/..." />
+
+    <label>Watermark <span>*</span></label>
+    <input type="text" id="watermarkInput" value="@achadinhosgala" />
+
+    <label>Vídeo de reação <span class="badge-optional">opcional</span></label>
+    <input type="file" id="reactionInput" accept="video/mp4" />
+
+    <button id="processBtn" onclick="startProcess()">⚙️ Processar Vídeo</button>
+
+    <div id="status"></div>
+
+    <div id="caption-box">
+      <h3>📋 Caption do vídeo</h3>
+      <div id="caption-text"></div>
+      <button class="copy-btn" onclick="copyCaption()">Copiar caption</button>
+    </div>
+  </div>
+
+  <script>
+    const API = "http://93.127.212.198:5001";
+    const EXTRACT_API = "http://localhost:5001";
+
+    // ===== FUNÇÕES DE EXTRAÇÃO DE INFORMAÇÕES =====
+    async function extractVideoInfo() {
+      const url = document.getElementById("extractUrlInput").value.trim();
+      const btn = document.getElementById("extractBtn");
+
+      if (!url) return showExtractStatus("Cole uma URL válida do TikTok.", "error");
+
+      btn.disabled = true;
+      document.getElementById("info-box").style.display = "none";
+      showExtractStatus('<span class="loader"></span> Buscando informações...', "pending");
+
+      try {
+        const res = await fetch(`${EXTRACT_API}/extract-info`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: url })
+        });
+
+        const data = await res.json();
+
+        if (data.error) {
+          showExtractStatus(`❌ Erro: ${data.error}`, "error");
+          btn.disabled = false;
+          return;
+        }
+
+        if (data.title || data.description) {
+          document.getElementById("info-title").textContent = data.title || "Não disponível";
+          document.getElementById("info-description").textContent = data.description || "Não disponível";
+          document.getElementById("info-box").style.display = "block";
+          showExtractStatus("✅ Informações extraídas com sucesso!", "success");
+        } else {
+          showExtractStatus("⚠️ Nenhuma informação encontrada", "pending");
+        }
+      } catch (e) {
+        showExtractStatus(`❌ Erro ao conectar ao servidor: ${e.message}`, "error");
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function showExtractStatus(msg, type) {
+      const el = document.getElementById("extract-status");
+      el.innerHTML = msg;
+      el.className = type;
+      el.style.display = "block";
+    }
+
+    // ===== FUNÇÕES DE PROCESSAMENTO DE VÍDEO =====
+    async function startProcess() {
+      const url = document.getElementById("urlInput").value.trim();
+      const watermark = document.getElementById("watermarkInput").value.trim();
+      const reaction = document.getElementById("reactionInput").files[0];
+      const btn = document.getElementById("processBtn");
+
+      if (!url) return showStatus("Cole uma URL válida do TikTok.", "error");
+
+      btn.disabled = true;
+      document.getElementById("caption-box").style.display = "none";
+      showStatus('<span class="loader"></span> Enviando...', "pending");
+
+      const form = new FormData();
+      form.append("url", url);
+      form.append("watermark", watermark || "@achadinhosgala");
+      if (reaction) form.append("reaction", reaction);
+
+      try {
+        const res = await fetch(`${API}/process`, { method: "POST", body: form });
+        const { job_id, error } = await res.json();
+        if (error) { showStatus(error, "error"); btn.disabled = false; return; }
+        pollStatus(job_id);
+      } catch (e) {
+        showStatus("Erro ao conectar ao servidor.", "error");
+        btn.disabled = false;
+      }
+    }
+
+    function pollStatus(job_id) {
+      const btn = document.getElementById("processBtn");
+      const statusMessages = {
+        pending: "Aguardando...",
+        downloading: "⬇️ Baixando vídeo...",
+        processing: "🎬 Aplicando efeitos com FFmpeg..."
+      };
+      const interval = setInterval(async () => {
+        const res = await fetch(`${API}/status/${job_id}`);
+        const data = await res.json();
+
+        if (data.status === "done") {
+          clearInterval(interval);
+          showStatus(
+            `✅ Pronto! <a href="${API}/file/${job_id}" style="color:#25f4ee;font-weight:bold">⬇️ Baixar vídeo processado</a>`,
+            "success"
+          );
+          btn.disabled = false;
+          if (data.caption) {
+            document.getElementById("caption-text").textContent = data.caption;
+            document.getElementById("caption-box").style.display = "block";
+          }
+        } else if (data.status === "error") {
+          clearInterval(interval);
+          showStatus("❌ Erro: " + data.message, "error");
+          btn.disabled = false;
+        } else {
+          const msg = statusMessages[data.status] || "Processando...";
+          showStatus(`<span class="loader"></span> ${msg}`, "pending");
+        }
+      }, 2000);
+    }
+
+    function showStatus(msg, type) {
+      const el = document.getElementById("status");
+      el.innerHTML = msg;
+      el.className = type;
+      el.style.display = "block";
+    }
+
+    function copyCaption() {
+      const text = document.getElementById("caption-text").textContent;
+      navigator.clipboard.writeText(text).then(() => alert("Caption copiada!"));
+    }
+
+    function copyText(elementId) {
+      const text = document.getElementById(elementId).textContent;
+      navigator.clipboard.writeText(text).then(() => alert("Texto copiado!"));
+    }
+  </script>
+</body>
+</html>
