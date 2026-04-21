@@ -1,34 +1,119 @@
-# 🎵 TikTok Downloader
+# TikTok Downloader
 
-Baixe vídeos do TikTok sem marca d'água via interface web, rodando com Docker.
+Download de vídeos do TikTok com processamento de vídeo via interface web usando Docker.
 
-## Estrutura
+## 📋 O que faz
 
+- **Download**: Baixa vídeos do TikTok/YouTube via yt-dlp
+- **Processamento**: Aplica filtros de vídeo (escala, overlay, watermark)
+- **Reação**: Suporta adicionar vídeo de reação em overlay
+- **Extração**: Extrai metadados (título, descrição, autor, duração)
 
-ffmpeg -y -i "video_processado.mp4" -ss 00:00:00.5 -t 59 -filter_complex "[0:v]setpts=PTS/0.98,fps=fps=29.970,format=yuv420p,split[main][blur];[blur]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,gblur=sigma=30,eq=brightness=-0.28:contrast=0.98[bg];[main]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:810,eq=brightness=0.03:contrast=1.03:saturation=0.98:gamma=1.01,unsharp=luma_msize_x=3:luma_msize_y=3:luma_amount=0.5[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2[composited];[composited]drawtext=text='@meucanal':fontsize=32:fontcolor=white:borderw=3:bordercolor=black:x='abs(mod(t*280\,2*(W-tw))-(W-tw))':y='abs(mod(t*240\,2*(H-th))-(H-th))',noise=alls=3:allf=t+u,hue=h=0.5[final]" -map "[final]" -c:v libx264 -preset slow -crf 26 -an -metadata title="Content Creator" -metadata artist="CreatorName" -metadata comment="Original content" -movflags +faststart "temp_saida.mp4" && ffmpeg -y -i "temp_saida.mp4" -filter_complex "[0:v]format=yuv420p,noise=alls=2:allf=t+u[final]" -map "[final]" -c:v libx264 -preset slow -crf 28 -an -metadata title="Final Video" -metadata artist="@meucanal" -movflags +faststart "saida.mp4" && rm temp_saida.mp4
-
-```
-tiktok-downloader/
-├── docker-compose.yml
-├── backend/
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   └── app.py
-└── frontend/
-    ├── Dockerfile
-    └── index.html
-```
-
-## Como usar
+## 🚀 Quick Start
 
 ```bash
 docker compose up --build
 ```
 
-Acesse: http://localhost:8080
+Acesse: **http://localhost:8080**
 
-## Stack
+## 📁 Estrutura
 
-- **Frontend:** HTML + CSS + JS puro (servido via nginx)
-- **Backend:** Python + Flask + yt-dlp
-- **Infra:** Docker + Docker Compose
+```
+tiktok-downloader/
+├── docker-compose.yml
+├── Dockerfile
+├── requirements.txt
+├── README.md
+├── backend/
+│   ├── app.py              # API Flask (porta 5000)
+│   ├── Dockerfile
+│   └── requirements.txt
+└── frontend/
+    ├── index.html          # Interface web (porta 80)
+    └── Dockerfile
+```
+
+## 🛠️ Tech Stack
+
+- **Backend**: Python + Flask + yt-dlp
+- **Frontend**: HTML + CSS + JavaScript
+- **Processamento**: FFmpeg
+- **Infra**: Docker + Docker Compose
+
+## 📡 API Endpoints
+
+### `POST /process`
+Processa um vídeo
+
+**Parâmetros:**
+- `url` (string) - URL do vídeo
+- `watermark` (string) - Texto da marca d'água
+- `reaction` (file) - Arquivo de reação (opcional)
+
+**Resposta:**
+```json
+{
+  "job_id": "uuid-da-tarefa"
+}
+```
+
+### `GET /status/<job_id>`
+Status da tarefa
+
+**Resposta:**
+```json
+{
+  "status": "downloading|processing|done|error",
+  "file": "caminho/do/arquivo",
+  "caption": "descrição do vídeo",
+  "message": "mensagem de erro (se houver)"
+}
+```
+
+### `GET /file/<job_id>`
+Download do arquivo processado
+
+### `POST /extract-info`
+Extrai metadados do vídeo
+
+**Parâmetros:**
+- `url` (string) - URL do vídeo
+
+**Resposta:**
+```json
+{
+  "title": "...",
+  "description": "...",
+  "uploader": "...",
+  "duration": 123,
+  "thumbnail": "url"
+}
+```
+
+## ⚙️ Configuração
+
+### Variáveis de Ambiente
+- `PYTHONUNBUFFERED=1` - Saída sem buffer
+
+### Portas
+- **Frontend**: 8080 (nginx)
+- **Backend**: 5000 (Flask)
+- **API**: 8000 (exposta via docker-compose)
+
+## 📝 Notas
+
+- Vídeos são salvos em `/downloads`
+- Suporta TikTok e YouTube
+- Processamento é assíncrono (threading)
+- Arquivos temporários são removidos após conclusão
+
+## 🔧 Requisitos
+
+- Docker
+- Docker Compose
+- FFmpeg (instalado nos containers)
+
+## 📜 Licença
+
+Confira os Termos de Serviço do TikTok antes de usar.
