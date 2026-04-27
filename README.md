@@ -1,6 +1,13 @@
-# TikTok Downloader
+# TikTok Download
 
 Download de vídeos do TikTok com processamento de vídeo via interface web usando Docker.
+
+<div align="center">
+  <img src="https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white" />
+  <img src="https://img.shields.io/badge/Flask-000000?style=flat&logo=flask&logoColor=white" />
+  <img src="https://img.shields.io/badge/FFmpeg-007880?style=flat&logo=ffmpeg&logoColor=white" />
+  <img src="https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white" />
+</div>
 
 ## 📋 O que faz
 
@@ -12,25 +19,29 @@ Download de vídeos do TikTok com processamento de vídeo via interface web usan
 ## 🚀 Quick Start
 
 ```bash
+# Copie o arquivo .env.example para .env (opcional - para customizar)
+cp .env.example .env
+
 docker compose up --build
 ```
 
-Acesse: **http://localhost:8080**
+Acesse: **http://localhost:8082**
 
 ## 📁 Estrutura
 
 ```
-tiktok-downloader/
+tiktok-download/
+├── .env.example            # Exemplo de variáveis de ambiente
 ├── docker-compose.yml
-├── Dockerfile
-├── requirements.txt
 ├── README.md
 ├── backend/
 │   ├── app.py              # API Flask (porta 5000)
 │   ├── Dockerfile
 │   └── requirements.txt
 └── frontend/
-    ├── index.html          # Interface web (porta 80)
+    ├── index.html          # Interface web
+    ├── config.js.template  # Template de configuração
+    ├── nginx-entrypoint.sh # Script de startup do nginx
     └── Dockerfile
 ```
 
@@ -94,19 +105,33 @@ Extrai metadados do vídeo
 ## ⚙️ Configuração
 
 ### Variáveis de Ambiente
-- `PYTHONUNBUFFERED=1` - Saída sem buffer
+
+No arquivo `.env` (copie de `.env.example`), você pode configurar:
+
+| Variável | Descrição | Padrão |
+|----------|-----------|--------|
+| `VITE_API_URL` | URL da API para o frontend | `http://localhost:5000` |
+| `VITE_EXTRACT_API_URL` | URL para extração de metadados | `http://localhost:5000` |
+| `CORS_ORIGINS` | Origins permitidos | `http://localhost:8082` |
 
 ### Portas
-- **Frontend**: 8080 (nginx)
+- **Frontend**: 8082 (nginx)
 - **Backend**: 5000 (Flask)
-- **API**: 8000 (exposta via docker-compose)
+
+### Rebuild após alterar variáveis
+
+```bash
+docker compose down
+docker compose up -d --build
+```
 
 ## 📝 Notas
 
-- Vídeos são salvos em `/downloads`
+- Vídeos são salvos no diretório `./downloads` (montado como volume)
 - Suporta TikTok e YouTube
 - Processamento é assíncrono (threading)
 - Arquivos temporários são removidos após conclusão
+- O frontend lê a configuração via `config.js` gerado no startup do container
 
 ## 🔧 Requisitos
 
