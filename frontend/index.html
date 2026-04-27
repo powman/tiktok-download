@@ -185,9 +185,10 @@
     </div>
   </div>
 
+  <script src="config.js"></script>
   <script>
-    const API = "http://93.127.212.198:5001";
-    const EXTRACT_API = "http://localhost:5001";
+    const API = window.APP_CONFIG?.API || "http://localhost:5001";
+    const EXTRACT_API = window.APP_CONFIG?.EXTRACT_API || "http://localhost:5001";
 
     // ===== FUNÇÕES DE EXTRAÇÃO DE INFORMAÇÕES =====
     async function extractVideoInfo() {

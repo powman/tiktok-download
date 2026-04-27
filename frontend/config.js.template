@@ -1,0 +1,5 @@
+// Configurações do frontend - gerado dinamicamente pelo Docker
+window.APP_CONFIG = {
+  API: process.env.VITE_API_URL || "http://localhost:5001",
+  EXTRACT_API: process.env.VITE_EXTRACT_API_URL || "http://localhost:5001"
+};

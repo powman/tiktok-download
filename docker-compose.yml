@@ -1,10 +1,33 @@
 version: '3.8'
 
 services:
-  hello-api:
-    build: .
+  backend:
+    build: ./backend
     ports:
-      - "8000:8000"
+      - "5000:5000"
     environment:
       - PYTHONUNBUFFERED=1
-    container_name: hello-world-api
+      - API_HOST=0.0.0.0
+      - API_PORT=5000
+    volumes:
+      - ./downloads:/downloads
+    container_name: tiktok-backend
+    networks:
+      - tiktok-network
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8082:80"
+    environment:
+      - VITE_API_URL=http://localhost:5000
+      - VITE_EXTRACT_API_URL=http://localhost:5000
+    depends_on:
+      - backend
+    container_name: tiktok-frontend
+    networks:
+      - tiktok-network
+
+networks:
+  tiktok-network:
+    driver: bridge
