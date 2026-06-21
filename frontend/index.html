@@ -131,6 +131,32 @@
     #extract-status.error { border: 1px solid #fe2c55; color: #fe2c55; }
     #extract-status.success { border: 1px solid #25f4ee; color: #25f4ee; }
     #extract-status.pending { border: 1px solid #aaa; color: #aaa; }
+    #shop-status {
+      margin-top: 12px;
+      padding: 14px;
+      border-radius: 10px;
+      background: #111;
+      font-size: 0.9rem;
+      display: none;
+      text-align: center;
+      line-height: 1.6;
+    }
+    #shop-status.error { border: 1px solid #fe2c55; color: #fe2c55; }
+    #shop-status.success { border: 1px solid #25f4ee; color: #25f4ee; }
+    #shop-status.pending { border: 1px solid #aaa; color: #aaa; }
+    .product-card {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      background: #0a0a0a;
+      border-radius: 8px;
+      border-left: 3px solid #25f4ee;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    .product-card img { width: 56px; height: 56px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
+    .product-card .product-title { font-size: 0.85rem; color: #ccc; }
+    .product-card .product-price { font-size: 0.85rem; color: #25f4ee; font-weight: bold; margin-top: 4px; }
   </style>
 </head>
 <body>
@@ -159,6 +185,20 @@
           <button class="copy-btn" onclick="copyText('info-description')" style="margin-top: 8px;">Copiar descrição</button>
         </div>
       </div>
+    </div>
+
+    <!-- Seção de Extração de Produtos do Shop -->
+    <div id="shop-section" style="margin-bottom: 40px; padding-bottom: 30px; border-bottom: 1px solid #333;">
+      <h2 style="font-size: 1.3rem; margin-bottom: 16px; color: #25f4ee;">🛒 Extrair Produto do Shop</h2>
+
+      <label>URL do vídeo do TikTok <span>*</span></label>
+      <input type="text" id="shopUrlInput" placeholder="https://www.tiktok.com/@user/video/..." />
+
+      <button id="shopBtn" onclick="extractShopInfo()" style="margin-top: 16px;">🛒 Buscar Produtos</button>
+
+      <div id="shop-status"></div>
+
+      <div id="shop-box" style="display: none; margin-top: 20px;"></div>
     </div>
 
     <!-- Seção de Processamento de Vídeo -->
@@ -236,6 +276,69 @@
       el.innerHTML = msg;
       el.className = type;
       el.style.display = "block";
+    }
+
+    // ===== FUNÇÕES DE EXTRAÇÃO DE PRODUTOS DO SHOP =====
+    async function extractShopInfo() {
+      const url = document.getElementById("shopUrlInput").value.trim();
+      const btn = document.getElementById("shopBtn");
+
+      if (!url) return showShopStatus("Cole uma URL válida do TikTok.", "error");
+
+      btn.disabled = true;
+      document.getElementById("shop-box").style.display = "none";
+      showShopStatus('<span class="loader"></span> Buscando produtos...', "pending");
+
+      try {
+        const res = await fetch(`${EXTRACT_API}/extract-shop-info`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: url })
+        });
+
+        const data = await res.json();
+
+        if (data.error) {
+          showShopStatus(`❌ Erro: ${data.error}`, "error");
+          btn.disabled = false;
+          return;
+        }
+
+        const products = data.products || [];
+        if (products.length === 0) {
+          showShopStatus("⚠️ Nenhum produto encontrado neste vídeo", "pending");
+        } else {
+          const box = document.getElementById("shop-box");
+          box.innerHTML = products.map(p => `
+            <div class="product-card">
+              ${p.image ? `<img src="${escapeHtml(p.image)}" alt="produto" />` : ""}
+              <div>
+                <div class="product-title">${escapeHtml(p.title || "Sem título")}</div>
+                <div class="product-price">${p.price ? "R$ " + escapeHtml(String(p.price)) : ""}</div>
+              </div>
+            </div>
+          `).join("");
+          box.style.display = "block";
+          showShopStatus(`✅ ${products.length} produto(s) encontrado(s)!`, "success");
+        }
+      } catch (e) {
+        showShopStatus(`❌ Erro ao conectar ao servidor: ${e.message}`, "error");
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function showShopStatus(msg, type) {
+      const el = document.getElementById("shop-status");
+      el.innerHTML = msg;
+      el.className = type;
+      el.style.display = "block";
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
     }
 
     // ===== FUNÇÕES DE PROCESSAMENTO DE VÍDEO =====
