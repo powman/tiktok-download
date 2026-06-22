@@ -166,21 +166,27 @@ def build_filter_complex(has_reaction, watermark_text, speed_factor=0.98, fps=29
         f"y='abs(mod(t*{int(240*speed_factor)}\,2*(H-th))-(H-th))'"
     )
 
-    # Processamento direto sem pillarbox blur
+    # Pillarbox Blur com parâmetros alterados
     base_filter = (
-        f"[0:v]{speed_filter}{fps_filter}format=yuv420p,scale=1080:1920:force_original_aspect_ratio=decrease,"
-        f"{color_adjust},{unsharp}[processed];"
+        f"[0:v]{speed_filter}{fps_filter}format=yuv420p,split[main][blur];"
+        "[blur]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,"
+        "gblur=sigma=30,eq=brightness=-0.28:contrast=0.98[bg];"
+        "[main]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:810,"
+        f"{color_adjust},{unsharp}[fg];"
+        "[bg][fg]overlay=(W-w)/2:(H-h)/2[composited];"
     )
 
     if has_reaction:
         return (
-            f"[processed]{drawtext}[watermarked];"
+            base_filter +
+            f"[composited]{drawtext}[watermarked];"
             "[watermarked][1:v]overlay=W-w-60:H-h-60:enable='between(t,0,20)',"
             f"{noise},{hue}[final]"
         )
     else:
         return (
-            f"[processed]{drawtext},{noise},{hue}[final]"
+            base_filter +
+            f"[composited]{drawtext},{noise},{hue}[final]"
         )
 
 
