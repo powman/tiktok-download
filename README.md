@@ -15,7 +15,6 @@ Download de vídeos do TikTok com processamento de vídeo via interface web usan
 - **Processamento**: Aplica filtros de vídeo (escala, overlay, watermark)
 - **Reação**: Suporta adicionar vídeo de reação em overlay
 - **Extração**: Extrai metadados (título, descrição, autor, duração)
-- **Shop**: Extrai produtos marcados em vídeos do TikTok Shop (título, preço, imagem) via Playwright
 
 ## 🚀 Quick Start
 
@@ -48,7 +47,7 @@ tiktok-download/
 
 ## 🛠️ Tech Stack
 
-- **Backend**: Python + Flask + yt-dlp + Playwright
+- **Backend**: Python + Flask + yt-dlp
 - **Frontend**: HTML + CSS + JavaScript
 - **Processamento**: FFmpeg
 - **Infra**: Docker + Docker Compose
@@ -103,20 +102,6 @@ Extrai metadados do vídeo
 }
 ```
 
-### `POST /extract-shop-info`
-Extrai produtos do TikTok Shop marcados em um vídeo (via Playwright)
-
-**Parâmetros:**
-- `url` (string) - URL do vídeo do TikTok
-
-**Resposta:**
-```json
-{
-  "products": [
-    { "title": "...", "price": "...", "image": "url" }
-  ]
-}
-```
 
 ## ⚙️ Configuração
 

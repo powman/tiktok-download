@@ -3,8 +3,6 @@ from flask_cors import CORS
 from yt_dlp import YoutubeDL
 import os, uuid, threading, subprocess, random
 
-from shop_scraper import extract_shop_products, ShopScraperError
-
 app = Flask(__name__)
 CORS(app)
 
@@ -243,25 +241,6 @@ def extract_info():
         
     except subprocess.TimeoutExpired:
         return jsonify({"error": "Timeout ao extrair informações"}), 504
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route("/extract-shop-info", methods=["POST"])
-def extract_shop_info():
-    if request.is_json:
-        video_url = request.json.get("url", "").strip()
-    else:
-        video_url = request.form.get("url", "").strip()
-
-    if not video_url:
-        return jsonify({"error": "URL is required"}), 400
-
-    try:
-        products = extract_shop_products(video_url)
-        return jsonify({"products": products})
-    except ShopScraperError as e:
-        return jsonify({"error": str(e)}), 502
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
