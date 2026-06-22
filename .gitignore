@@ -43,6 +43,9 @@ wheels/
 .env
 .env.local
 
+# Google Sheets service account credentials
+backend/credentials/
+
 # OS
 .DS_Store
 Thumbs.db

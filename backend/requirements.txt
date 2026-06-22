@@ -1,5 +1,7 @@
 flask
 flask-cors
-yt-dlp
+yt-dlp[default]
 requests
 asyncio
+gspread
+google-auth

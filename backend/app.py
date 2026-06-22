@@ -3,6 +3,8 @@ from flask_cors import CORS
 from yt_dlp import YoutubeDL
 import os, uuid, threading, subprocess, random, sqlite3, json, re
 from datetime import datetime, timezone
+import gspread
+from google.oauth2.service_account import Credentials
 
 app = Flask(__name__)
 CORS(app)
@@ -13,6 +15,66 @@ jobs = {}
 
 PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "http://localhost:5001").rstrip("/")
 HISTORY_DB = os.path.join(WORK_DIR, "history.db")
+
+GOOGLE_SHEETS_ID = os.environ.get("GOOGLE_SHEETS_ID", "")
+GOOGLE_SHEETS_CREDENTIALS_PATH = os.environ.get(
+    "GOOGLE_SHEETS_CREDENTIALS_PATH", "/app/credentials/google-sheets.json"
+)
+SHEET_HEADER = ["Título", "Descrição", "URL", "Data"]
+
+_worksheet_cache = {"worksheet": None}
+
+
+def get_worksheet():
+    if _worksheet_cache["worksheet"] is not None:
+        return _worksheet_cache["worksheet"]
+    if not GOOGLE_SHEETS_ID or not os.path.exists(GOOGLE_SHEETS_CREDENTIALS_PATH):
+        return None
+    try:
+        creds = Credentials.from_service_account_file(
+            GOOGLE_SHEETS_CREDENTIALS_PATH,
+            scopes=["https://www.googleapis.com/auth/spreadsheets"],
+        )
+        client = gspread.authorize(creds)
+        worksheet = client.open_by_key(GOOGLE_SHEETS_ID).sheet1
+        _worksheet_cache["worksheet"] = worksheet
+        return worksheet
+    except Exception as e:
+        print(f"[google-sheets] erro ao conectar: {e}")
+        return None
+
+
+def sheet_append_row(item):
+    worksheet = get_worksheet()
+    if worksheet is None:
+        return False
+    try:
+        if not worksheet.get_all_values():
+            worksheet.append_row(SHEET_HEADER)
+        worksheet.append_row([
+            item.get("title") or "",
+            item.get("description") or "",
+            item.get("video_url") or "",
+            item.get("processed_at") or "",
+        ])
+        return True
+    except Exception as e:
+        print(f"[google-sheets] erro ao adicionar linha: {e}")
+        return False
+
+
+def sheet_remove_row(video_url):
+    worksheet = get_worksheet()
+    if worksheet is None or not video_url:
+        return False
+    try:
+        cell = worksheet.find(video_url)
+        if cell:
+            worksheet.delete_rows(cell.row)
+        return True
+    except Exception as e:
+        print(f"[google-sheets] erro ao remover linha: {e}")
+        return False
 
 
 def get_db():
@@ -391,7 +453,13 @@ def update_history(history_id):
             return jsonify({"error": "Registro não encontrado"}), 404
         row = conn.execute("SELECT * FROM videos_history WHERE id = ?", (history_id,)).fetchone()
 
-    return jsonify(dict(row))
+    item = dict(row)
+    if uploaded:
+        sheet_append_row(item)
+    else:
+        sheet_remove_row(item.get("video_url"))
+
+    return jsonify(item)
 
 
 if __name__ == "__main__":
