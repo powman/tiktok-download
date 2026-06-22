@@ -9,6 +9,7 @@ services:
       - PYTHONUNBUFFERED=1
       - API_HOST=0.0.0.0
       - API_PORT=5001
+      - PUBLIC_BASE_URL=http://localhost:5001
     volumes:
       - ./downloads:/downloads
     container_name: tiktok-backend

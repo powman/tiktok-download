@@ -10,18 +10,48 @@
       font-family: 'Segoe UI', sans-serif;
       background: #010101;
       color: #fff;
-      display: flex;
-      justify-content: center;
-      align-items: center;
       min-height: 100vh;
       padding: 20px;
     }
+    .page-wrap {
+      max-width: 520px;
+      margin: 0 auto;
+    }
+    .page-wrap.wide { max-width: 1100px; }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      background: #1a1a1a;
+      border-radius: 12px;
+      padding: 6px;
+      max-width: 520px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .tabs.wide { max-width: 1100px; }
+    .tab-btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: #aaa;
+      font-size: 0.95rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    .tab-btn.active { background: #fe2c55; color: #fff; }
+    .view { display: none; }
+    .view.active { display: block; }
     .card {
       background: #1a1a1a;
       border-radius: 16px;
       padding: 40px;
       width: 100%;
       max-width: 520px;
+      margin: 0 auto;
       box-shadow: 0 0 40px rgba(254,44,85,0.3);
     }
     h1 { text-align: center; font-size: 1.8rem; margin-bottom: 8px; color: #fe2c55; }
@@ -131,9 +161,197 @@
     #extract-status.error { border: 1px solid #fe2c55; color: #fe2c55; }
     #extract-status.success { border: 1px solid #25f4ee; color: #25f4ee; }
     #extract-status.pending { border: 1px solid #aaa; color: #aaa; }
+
+    /* ===== Histórico ===== */
+    .history-card {
+      background: #1a1a1a;
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 0 40px rgba(254,44,85,0.15);
+    }
+    .history-stats {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .stat-pill {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 20px;
+      padding: 8px 16px;
+      font-size: 0.85rem;
+      color: #ccc;
+    }
+    .stat-pill b { color: #25f4ee; }
+    .history-toolbar {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+    .history-toolbar input[type=text] {
+      flex: 1;
+      min-width: 200px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid #333;
+      background: #111;
+      color: #fff;
+      font-size: 0.9rem;
+      outline: none;
+    }
+    .history-toolbar select {
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid #333;
+      background: #111;
+      color: #fff;
+      font-size: 0.9rem;
+    }
+    .filter-group { display: flex; gap: 6px; }
+    .filter-btn {
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: 1px solid #333;
+      background: #111;
+      color: #aaa;
+      font-size: 0.85rem;
+      cursor: pointer;
+      width: auto;
+      margin-top: 0;
+    }
+    .filter-btn.active { background: #fe2c55; color: #fff; border-color: #fe2c55; }
+    .history-table-wrap { overflow-x: auto; }
+    table.history-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    table.history-table th {
+      text-align: left;
+      color: #aaa;
+      padding: 10px 12px;
+      border-bottom: 1px solid #333;
+      white-space: nowrap;
+    }
+    table.history-table td {
+      padding: 12px;
+      border-bottom: 1px solid #222;
+      vertical-align: top;
+      color: #ddd;
+    }
+    .col-title { word-break: break-word; }
+    .col-text { max-width: 260px; }
+    .desc-clamp {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .ver-mais {
+      background: none;
+      border: none;
+      color: #25f4ee;
+      cursor: pointer;
+      font-size: 0.78rem;
+      padding: 4px 0 0;
+      width: auto;
+      margin: 0;
+    }
+    .col-url { white-space: nowrap; }
+    .col-url a { color: #25f4ee; }
+    .col-url .copy-btn { margin-top: 8px; display: block; }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: #444;
+      transition: 0.2s;
+      border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: #fff;
+      transition: 0.2s;
+      border-radius: 50%;
+    }
+    .switch input:checked + .slider { background-color: #25f4ee; }
+    .switch input:checked + .slider:before { transform: translateX(20px); }
+    .uploaded-label { font-size: 0.75rem; color: #aaa; margin-left: 8px; }
+    .history-empty {
+      text-align: center;
+      color: #777;
+      padding: 40px 0;
+    }
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 14px;
+      margin-top: 20px;
+    }
+    .pagination button {
+      width: auto;
+      padding: 8px 16px;
+      margin-top: 0;
+      background: #111;
+      border: 1px solid #333;
+    }
+    .pagination button:disabled { background: #0a0a0a; color: #555; }
+    .pagination span { font-size: 0.85rem; color: #aaa; }
+
+    @media (max-width: 700px) {
+      table.history-table thead { display: none; }
+      table.history-table, table.history-table tbody, table.history-table tr, table.history-table td {
+        display: block;
+        width: 100%;
+      }
+      table.history-table tr {
+        background: #111;
+        border: 1px solid #333;
+        border-radius: 10px;
+        margin-bottom: 14px;
+        padding: 10px;
+      }
+      table.history-table td {
+        border-bottom: none;
+        padding: 6px 4px;
+      }
+      table.history-table td::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 0.72rem;
+        color: #777;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+      }
+      .col-title, .col-text { max-width: 100%; }
+      .col-url { white-space: normal; }
+    }
   </style>
 </head>
 <body>
+  <div class="tabs" id="tabs">
+    <button class="tab-btn active" data-view="process" onclick="switchTab('process')">⚙️ Processar</button>
+    <button class="tab-btn" data-view="history" onclick="switchTab('history')">🕘 Histórico</button>
+  </div>
+
+  <div id="process-view" class="view active">
   <div class="card">
     <!-- Seção de Extração de Informações -->
     <div id="extract-section" style="margin-bottom: 40px; padding-bottom: 30px; border-bottom: 1px solid #333;">
@@ -182,6 +400,59 @@
       <h3>📋 Caption do vídeo</h3>
       <div id="caption-text"></div>
       <button class="copy-btn" onclick="copyCaption()">Copiar caption</button>
+    </div>
+  </div>
+  </div>
+
+  <div id="history-view" class="view">
+    <div class="page-wrap wide">
+      <div class="history-card">
+        <h1 style="margin-bottom: 20px;">🕘 Histórico de Vídeos</h1>
+
+        <div class="history-stats" id="history-stats">
+          <div class="stat-pill">Total: <b id="stat-total">0</b> vídeos</div>
+          <div class="stat-pill">Enviados: <b id="stat-uploaded">0</b></div>
+          <div class="stat-pill">Pendentes: <b id="stat-pending">0</b></div>
+        </div>
+
+        <div class="history-toolbar">
+          <input type="text" id="historySearch" placeholder="Pesquisar por título, texto ou URL..." oninput="onHistorySearch()" />
+          <div class="filter-group">
+            <button class="filter-btn active" data-filter="all" onclick="setHistoryFilter('all')">Todos</button>
+            <button class="filter-btn" data-filter="sent" onclick="setHistoryFilter('sent')">Enviados</button>
+            <button class="filter-btn" data-filter="pending" onclick="setHistoryFilter('pending')">Não enviados</button>
+          </div>
+          <select id="historySort" onchange="onHistorySortChange()">
+            <option value="newest">Mais recentes</option>
+            <option value="oldest">Mais antigos</option>
+            <option value="title_asc">Título A-Z</option>
+            <option value="title_desc">Título Z-A</option>
+          </select>
+        </div>
+
+        <div class="history-table-wrap">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Título</th>
+                <th>Texto</th>
+                <th>URL</th>
+                <th>Data</th>
+                <th>Enviado</th>
+              </tr>
+            </thead>
+            <tbody id="history-tbody"></tbody>
+          </table>
+        </div>
+
+        <div id="history-empty" class="history-empty" style="display:none;">Nenhum vídeo encontrado.</div>
+
+        <div class="pagination">
+          <button id="historyPrev" onclick="changeHistoryPage(-1)">← Anterior</button>
+          <span id="historyPageInfo">Página 1 de 1</span>
+          <button id="historyNext" onclick="changeHistoryPage(1)">Próxima →</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -289,6 +560,7 @@
             document.getElementById("caption-text").textContent = data.caption;
             document.getElementById("caption-box").style.display = "block";
           }
+          loadHistory();
         } else if (data.status === "error") {
           clearInterval(interval);
           showStatus("❌ Erro: " + data.message, "error");
@@ -315,6 +587,162 @@
     function copyText(elementId) {
       const text = document.getElementById(elementId).textContent;
       navigator.clipboard.writeText(text).then(() => alert("Texto copiado!"));
+    }
+
+    // ===== ABAS =====
+    let historyPollInterval = null;
+
+    function switchTab(view) {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.view === view));
+      document.getElementById("process-view").classList.toggle("active", view === "process");
+      document.getElementById("history-view").classList.toggle("active", view === "history");
+
+      if (view === "history") {
+        loadHistory();
+        if (!historyPollInterval) {
+          historyPollInterval = setInterval(loadHistory, 5000);
+        }
+      } else if (historyPollInterval) {
+        clearInterval(historyPollInterval);
+        historyPollInterval = null;
+      }
+    }
+
+    // ===== HISTÓRICO =====
+    const historyState = { search: "", filter: "all", sort: "newest", page: 1, perPage: 10 };
+    let historySearchTimer = null;
+
+    function onHistorySearch() {
+      clearTimeout(historySearchTimer);
+      historySearchTimer = setTimeout(() => {
+        historyState.search = document.getElementById("historySearch").value.trim();
+        historyState.page = 1;
+        loadHistory();
+      }, 300);
+    }
+
+    function setHistoryFilter(filter) {
+      historyState.filter = filter;
+      historyState.page = 1;
+      document.querySelectorAll(".filter-btn").forEach(b => b.classList.toggle("active", b.dataset.filter === filter));
+      loadHistory();
+    }
+
+    function onHistorySortChange() {
+      historyState.sort = document.getElementById("historySort").value;
+      historyState.page = 1;
+      loadHistory();
+    }
+
+    function changeHistoryPage(delta) {
+      historyState.page = Math.max(1, historyState.page + delta);
+      loadHistory();
+    }
+
+    async function loadHistory() {
+      const historyView = document.getElementById("history-view");
+      if (!historyView.classList.contains("active")) return;
+
+      const params = new URLSearchParams({
+        search: historyState.search,
+        filter: historyState.filter,
+        sort: historyState.sort,
+        page: historyState.page,
+        per_page: historyState.perPage
+      });
+
+      try {
+        const res = await fetch(`${API}/history?${params.toString()}`);
+        const data = await res.json();
+        renderHistory(data);
+      } catch (e) {
+        console.error("Erro ao carregar histórico:", e);
+      }
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str || "";
+      return div.innerHTML;
+    }
+
+    function formatDate(iso) {
+      if (!iso) return "-";
+      const d = new Date(iso);
+      return d.toLocaleString("pt-BR");
+    }
+
+    function renderHistory(data) {
+      document.getElementById("stat-total").textContent = data.stats.total;
+      document.getElementById("stat-uploaded").textContent = data.stats.uploaded;
+      document.getElementById("stat-pending").textContent = data.stats.pending;
+
+      const tbody = document.getElementById("history-tbody");
+      const emptyEl = document.getElementById("history-empty");
+
+      if (!data.items.length) {
+        tbody.innerHTML = "";
+        emptyEl.style.display = "block";
+      } else {
+        emptyEl.style.display = "none";
+        tbody.innerHTML = data.items.map(item => `
+          <tr data-id="${item.id}">
+            <td class="col-title" data-label="Título">${escapeHtml(item.title) || "<span style=color:#666>Sem título</span>"}</td>
+            <td class="col-text" data-label="Texto">
+              <div class="desc-clamp" id="desc-${item.id}">${escapeHtml(item.description) || "<span style=color:#666>Sem descrição</span>"}</div>
+              <button class="ver-mais" id="vermais-${item.id}" onclick="toggleDescription(${item.id})">Ver mais</button>
+            </td>
+            <td class="col-url" data-label="URL">
+              <a href="${escapeHtml(item.video_url)}" target="_blank" rel="noopener">▶️ Assistir vídeo</a>
+              <button class="copy-btn" data-url="${escapeHtml(item.video_url)}" onclick="copyVideoUrl(this)">📋 Copiar link</button>
+            </td>
+            <td data-label="Data">${formatDate(item.processed_at)}</td>
+            <td data-label="Enviado">
+              <label class="switch">
+                <input type="checkbox" ${item.uploaded ? "checked" : ""} onchange="toggleUploaded(${item.id}, this)">
+                <span class="slider"></span>
+              </label>
+              <span class="uploaded-label">${item.uploaded ? "Enviado" : "Não enviado"}</span>
+            </td>
+          </tr>
+        `).join("");
+      }
+
+      document.getElementById("historyPageInfo").textContent = `Página ${data.page} de ${data.pages}`;
+      document.getElementById("historyPrev").disabled = data.page <= 1;
+      document.getElementById("historyNext").disabled = data.page >= data.pages;
+    }
+
+    function toggleDescription(id) {
+      const el = document.getElementById(`desc-${id}`);
+      const btn = document.getElementById(`vermais-${id}`);
+      const clamped = el.classList.toggle("desc-clamp");
+      btn.textContent = clamped ? "Ver mais" : "Ver menos";
+    }
+
+    function copyVideoUrl(btn) {
+      navigator.clipboard.writeText(btn.dataset.url).then(() => alert("Link copiado!"));
+    }
+
+    async function toggleUploaded(id, checkbox) {
+      const row = checkbox.closest("tr");
+      const label = row.querySelector(".uploaded-label");
+      checkbox.disabled = true;
+      try {
+        const res = await fetch(`${API}/history/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ uploaded: checkbox.checked })
+        });
+        if (!res.ok) throw new Error("Falha ao atualizar");
+        label.textContent = checkbox.checked ? "Enviado" : "Não enviado";
+        loadHistory();
+      } catch (e) {
+        checkbox.checked = !checkbox.checked;
+        alert("Erro ao atualizar status: " + e.message);
+      } finally {
+        checkbox.disabled = false;
+      }
     }
   </script>
 </body>

@@ -1,7 +1,8 @@
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from yt_dlp import YoutubeDL
-import os, uuid, threading, subprocess, random
+import os, uuid, threading, subprocess, random, sqlite3, json, re
+from datetime import datetime, timezone
 
 app = Flask(__name__)
 CORS(app)
@@ -9,6 +10,62 @@ CORS(app)
 WORK_DIR = "/downloads"
 os.makedirs(WORK_DIR, exist_ok=True)
 jobs = {}
+
+PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "http://localhost:5001").rstrip("/")
+HISTORY_DB = os.path.join(WORK_DIR, "history.db")
+
+
+def get_db():
+    conn = sqlite3.connect(HISTORY_DB)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def init_db():
+    with get_db() as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS videos_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT,
+                description TEXT,
+                video_url TEXT,
+                processed_at TEXT,
+                uploaded INTEGER DEFAULT 0,
+                created_at TEXT,
+                updated_at TEXT
+            )
+        """)
+
+
+init_db()
+
+
+def fetch_video_metadata(video_url):
+    try:
+        result = subprocess.run(
+            ["yt-dlp", "--no-update", "--dump-json", "--quiet", video_url],
+            capture_output=True, text=True, timeout=30
+        )
+        if result.returncode != 0:
+            return {"title": "", "description": ""}
+        data = json.loads(result.stdout.strip().split("\n")[0])
+        title = data.get("title", "")
+        description = data.get("description", "")
+        if not description and title:
+            description = title
+        return {"title": title, "description": description}
+    except Exception:
+        return {"title": "", "description": ""}
+
+
+def save_history(title, description, video_url):
+    now = datetime.now(timezone.utc).isoformat()
+    with get_db() as conn:
+        conn.execute(
+            "INSERT INTO videos_history (title, description, video_url, processed_at, uploaded, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, 0, ?, ?)",
+            (title, description, video_url, now, now, now)
+        )
 
 
 def build_filter_complex(has_reaction, watermark_text, speed_factor=0.98, fps=29.970):
@@ -75,13 +132,9 @@ def do_process(job_id, video_url, reaction_path, watermark_text):
         with YoutubeDL({"outtmpl": temp_video, "format": "mp4", "quiet": True}) as ydl:
             ydl.download([video_url])
 
-        caption = ""
-        try:
-            r = subprocess.run(["yt-dlp","--no-update","--get-description","--quiet", video_url],
-                               capture_output=True, text=True, timeout=30)
-            caption = r.stdout.strip()
-        except Exception:
-            pass
+        metadata = fetch_video_metadata(video_url)
+        title = metadata["title"]
+        caption = metadata["description"]
 
         jobs[job_id] = {"status": "processing"}
         has_reaction = reaction_path and os.path.exists(reaction_path)
@@ -152,7 +205,8 @@ def do_process(job_id, video_url, reaction_path, watermark_text):
             raise RuntimeError(f"Passo 2 falhou: {proc2.stderr[-2000:]}")
 
         jobs[job_id] = {"status": "done", "file": output_path, "caption": caption}
-        
+        save_history(title, caption, f"{PUBLIC_BASE_URL}/videos/{job_id}")
+
     except Exception as e:
         jobs[job_id] = {"status": "error", "message": str(e)}
     finally:
@@ -196,6 +250,22 @@ def get_file(job_id):
     if not job or job["status"] != "done":
         return jsonify({"error": "File not ready"}), 404
     return send_file(job["file"], as_attachment=True, download_name="video_processado.mp4")
+
+
+UUID_RE = re.compile(r"^[0-9a-fA-F-]{36}$")
+
+
+@app.route("/videos/<job_id>")
+def serve_video(job_id):
+    if not UUID_RE.match(job_id):
+        return jsonify({"error": "ID inválido"}), 400
+
+    path = os.path.join(WORK_DIR, f"{job_id}_final.mp4")
+    if not os.path.exists(path):
+        return jsonify({"error": "Vídeo não encontrado"}), 404
+
+    return send_file(path, mimetype="video/mp4")
+
 
 @app.route("/extract-info", methods=["POST"])
 def extract_info():
@@ -243,6 +313,85 @@ def extract_info():
         return jsonify({"error": "Timeout ao extrair informações"}), 504
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+SORT_COLUMNS = {
+    "newest": "processed_at DESC",
+    "oldest": "processed_at ASC",
+    "title_asc": "title COLLATE NOCASE ASC",
+    "title_desc": "title COLLATE NOCASE DESC",
+}
+
+
+@app.route("/history", methods=["GET"])
+def get_history():
+    search = request.args.get("search", "").strip()
+    status_filter = request.args.get("filter", "all")
+    sort = request.args.get("sort", "newest")
+    try:
+        page = max(1, int(request.args.get("page", 1)))
+        per_page = max(1, min(100, int(request.args.get("per_page", 10))))
+    except ValueError:
+        page, per_page = 1, 10
+
+    where = []
+    params = []
+    if search:
+        where.append("(title LIKE ? OR description LIKE ? OR video_url LIKE ?)")
+        like = f"%{search}%"
+        params += [like, like, like]
+    if status_filter == "sent":
+        where.append("uploaded = 1")
+    elif status_filter == "pending":
+        where.append("uploaded = 0")
+
+    where_clause = f"WHERE {' AND '.join(where)}" if where else ""
+    order_clause = SORT_COLUMNS.get(sort, SORT_COLUMNS["newest"])
+
+    with get_db() as conn:
+        total = conn.execute(f"SELECT COUNT(*) FROM videos_history {where_clause}", params).fetchone()[0]
+        rows = conn.execute(
+            f"SELECT * FROM videos_history {where_clause} ORDER BY {order_clause} LIMIT ? OFFSET ?",
+            params + [per_page, (page - 1) * per_page]
+        ).fetchall()
+        uploaded_count = conn.execute("SELECT COUNT(*) FROM videos_history WHERE uploaded = 1").fetchone()[0]
+        total_count = conn.execute("SELECT COUNT(*) FROM videos_history").fetchone()[0]
+
+    items = [dict(row) for row in rows]
+
+    return jsonify({
+        "items": items,
+        "page": page,
+        "per_page": per_page,
+        "total": total,
+        "pages": max(1, (total + per_page - 1) // per_page),
+        "stats": {
+            "total": total_count,
+            "uploaded": uploaded_count,
+            "pending": total_count - uploaded_count,
+        }
+    })
+
+
+@app.route("/history/<int:history_id>", methods=["PATCH"])
+def update_history(history_id):
+    data = request.get_json(silent=True) or {}
+    if "uploaded" not in data:
+        return jsonify({"error": "Campo 'uploaded' é obrigatório"}), 400
+
+    uploaded = 1 if data["uploaded"] else 0
+    now = datetime.now(timezone.utc).isoformat()
+
+    with get_db() as conn:
+        cur = conn.execute(
+            "UPDATE videos_history SET uploaded = ?, updated_at = ? WHERE id = ?",
+            (uploaded, now, history_id)
+        )
+        if cur.rowcount == 0:
+            return jsonify({"error": "Registro não encontrado"}), 404
+        row = conn.execute("SELECT * FROM videos_history WHERE id = ?", (history_id,)).fetchone()
+
+    return jsonify(dict(row))
 
 
 if __name__ == "__main__":
