@@ -20,7 +20,7 @@ GOOGLE_SHEETS_ID = os.environ.get("GOOGLE_SHEETS_ID", "")
 GOOGLE_SHEETS_CREDENTIALS_PATH = os.environ.get(
     "GOOGLE_SHEETS_CREDENTIALS_PATH", "/app/credentials/google-sheets.json"
 )
-SHEET_HEADER = ["Título", "Descrição", "URL", "Data"]
+SHEET_HEADER = ["Título", "Descrição", "URL", "Data", "Publicardo?"]
 
 _worksheet_cache = {"worksheet": None}
 
@@ -56,6 +56,7 @@ def sheet_append_row(item):
             item.get("description") or "",
             item.get("video_url") or "",
             item.get("processed_at") or "",
+            "OK",
         ])
         return True
     except Exception as e:
@@ -444,28 +445,55 @@ def get_history():
 @app.route("/history/<int:history_id>", methods=["PATCH"])
 def update_history(history_id):
     data = request.get_json(silent=True) or {}
-    if "uploaded" not in data:
-        return jsonify({"error": "Campo 'uploaded' é obrigatório"}), 400
+    if not any(field in data for field in ("uploaded", "title", "description")):
+        return jsonify({"error": "Nenhum campo para atualizar"}), 400
 
-    uploaded = 1 if data["uploaded"] else 0
+    fields = []
+    params = []
+    if "title" in data:
+        fields.append("title = ?")
+        params.append(data["title"])
+    if "description" in data:
+        fields.append("description = ?")
+        params.append(data["description"])
+    if "uploaded" in data:
+        fields.append("uploaded = ?")
+        params.append(1 if data["uploaded"] else 0)
+
     now = datetime.now(timezone.utc).isoformat()
+    fields.append("updated_at = ?")
+    params.append(now)
+    params.append(history_id)
 
     with get_db() as conn:
         cur = conn.execute(
-            "UPDATE videos_history SET uploaded = ?, updated_at = ? WHERE id = ?",
-            (uploaded, now, history_id)
+            f"UPDATE videos_history SET {', '.join(fields)} WHERE id = ?",
+            params
         )
         if cur.rowcount == 0:
             return jsonify({"error": "Registro não encontrado"}), 404
         row = conn.execute("SELECT * FROM videos_history WHERE id = ?", (history_id,)).fetchone()
 
     item = dict(row)
-    if uploaded:
-        sheet_append_row(item)
-    else:
-        sheet_remove_row(item.get("video_url"))
+    if "uploaded" in data:
+        if item["uploaded"]:
+            sheet_append_row(item)
+        else:
+            sheet_remove_row(item.get("video_url"))
 
     return jsonify(item)
+
+
+@app.route("/history/<int:history_id>", methods=["DELETE"])
+def delete_history(history_id):
+    with get_db() as conn:
+        row = conn.execute("SELECT * FROM videos_history WHERE id = ?", (history_id,)).fetchone()
+        if row is None:
+            return jsonify({"error": "Registro não encontrado"}), 404
+        conn.execute("DELETE FROM videos_history WHERE id = ?", (history_id,))
+
+    sheet_remove_row(dict(row).get("video_url"))
+    return jsonify({"ok": True})
 
 
 if __name__ == "__main__":
