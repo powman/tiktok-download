@@ -458,8 +458,8 @@
     <label>URL do TikTok <span>*</span></label>
     <input type="text" id="urlInput" placeholder="https://www.tiktok.com/@user/video/..." />
 
-    <label>Watermark <span>*</span></label>
-    <input type="text" id="watermarkInput" value="@umortadela" />
+    <label>Watermark</label>
+    <input type="text" id="watermarkInput" placeholder="@seucanal (opcional)" />
 
     <div style="display:flex; align-items:center; gap:10px; margin-top:14px;">
       <label class="switch">
@@ -564,7 +564,7 @@
 
       const form = new FormData();
       form.append("url", url);
-      form.append("watermark", watermark || "@umortadela");
+      form.append("watermark", watermark);
       form.append("keep_audio", keepAudio ? "1" : "0");
 
       try {

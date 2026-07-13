@@ -166,8 +166,8 @@ def build_filter_complex(watermark_text, speed_factor=0.98, fps=29.970, keep_aud
     drawtext = (
         f"drawtext=text='{wm}':fontsize=32:fontcolor=white:borderw=3:"
         f"bordercolor=black:x='abs(mod(t*{int(280*speed_factor)}\,2*(W-tw))-(W-tw))':"
-        f"y='abs(mod(t*{int(240*speed_factor)}\,2*(H-th))-(H-th))'"
-    )
+        f"y='abs(mod(t*{int(240*speed_factor)}\,2*(H-th))-(H-th))',"
+    ) if wm else ""
 
     # Vídeo preenchendo a tela (sem pillarbox blur) + merge da capa.png por cima
     base_filter = (
@@ -179,7 +179,7 @@ def build_filter_complex(watermark_text, speed_factor=0.98, fps=29.970, keep_aud
 
     video_chain = (
         base_filter +
-        f"[composited]{drawtext},{noise},{hue}[final]"
+        f"[composited]{drawtext}{noise},{hue}[final]"
     )
 
     if keep_audio:
@@ -293,7 +293,7 @@ def do_process(job_id, video_url, watermark_text, keep_audio=False):
 @app.route("/process", methods=["POST"])
 def process():
     video_url = request.form.get("url", "").strip()
-    watermark = request.form.get("watermark", "@meucanal").strip()
+    watermark = request.form.get("watermark", "").strip()
     keep_audio = request.form.get("keep_audio", "0").strip() in ("1", "true", "on")
     if not video_url:
         return jsonify({"error": "URL is required"}), 400
