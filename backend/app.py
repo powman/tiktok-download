@@ -133,7 +133,7 @@ def save_history(title, description, video_url):
         )
 
 
-def build_filter_complex(watermark_text, speed_factor=0.98, fps=29.970):
+def build_filter_complex(watermark_text, speed_factor=0.98, fps=29.970, keep_audio=False):
     """
     Constrói filter complex com técnicas anti-detecção:
     - Velocidade alterada
@@ -177,13 +177,18 @@ def build_filter_complex(watermark_text, speed_factor=0.98, fps=29.970):
         "[main][1:v]overlay=0:0[composited];"
     )
 
-    return (
+    video_chain = (
         base_filter +
         f"[composited]{drawtext},{noise},{hue}[final]"
     )
 
+    if keep_audio:
+        video_chain += f";[0:a]atempo={speed_factor}[finalaudio]"
 
-def do_process(job_id, video_url, watermark_text):
+    return video_chain
+
+
+def do_process(job_id, video_url, watermark_text, keep_audio=False):
     temp_video = os.path.join(WORK_DIR, f"{job_id}_temp.mp4")
     temp_processed = os.path.join(WORK_DIR, f"{job_id}_processed.mp4")
     output_path = os.path.join(WORK_DIR, f"{job_id}_final.mp4")
@@ -206,7 +211,8 @@ def do_process(job_id, video_url, watermark_text):
         # PRIMEIRO PASSO: Aplica todas as transformações visuais
         filter_complex_pass1 = build_filter_complex(
             watermark_text,
-            speed_factor=0.98, fps=29.970
+            speed_factor=0.98, fps=29.970,
+            keep_audio=keep_audio
         )
 
         cmd_pass1 = ["ffmpeg", "-y", "-i", temp_video, "-loop", "1", "-i", CAPA_PATH]
@@ -217,6 +223,12 @@ def do_process(job_id, video_url, watermark_text):
             "-t", "59",
             "-filter_complex", filter_complex_pass1,
             "-map", "[final]",
+        ]
+        if keep_audio:
+            cmd_pass1 += ["-map", "[finalaudio]", "-c:a", "aac", "-b:a", "128k"]
+        else:
+            cmd_pass1 += ["-an"]  # Sem áudio
+        cmd_pass1 += [
             "-c:v", "libx264",
             "-preset", "slow",
             "-crf", "26",  # CRF mais baixo no primeiro passo
@@ -225,7 +237,6 @@ def do_process(job_id, video_url, watermark_text):
             "-g", "48",
             "-movflags", "+faststart",
             "-pix_fmt", "yuv420p",
-            "-an",  # Sem áudio
             "-metadata", f"title={random.choice(titles)}",
             "-metadata", f"artist={random.choice(artists)}",
             "-metadata", "comment=Original content",
@@ -243,6 +254,12 @@ def do_process(job_id, video_url, watermark_text):
             "ffmpeg", "-y", "-i", temp_processed,
             "-filter_complex", filter_complex_pass2,
             "-map", "[final]",
+        ]
+        if keep_audio:
+            cmd_pass2 += ["-map", "0:a?", "-c:a", "aac", "-b:a", "128k"]
+        else:
+            cmd_pass2 += ["-an"]
+        cmd_pass2 += [
             "-c:v", "libx264",
             "-preset", "slow",
             "-crf", "28",  # CRF diferente no segundo passo
@@ -251,7 +268,6 @@ def do_process(job_id, video_url, watermark_text):
             "-g", "48",
             "-movflags", "+faststart",
             "-pix_fmt", "yuv420p",
-            "-an",
             "-metadata", "title=Final Video",
             "-metadata", f"artist={watermark_text}",
             "-metadata", "comment=Processed",
@@ -278,6 +294,7 @@ def do_process(job_id, video_url, watermark_text):
 def process():
     video_url = request.form.get("url", "").strip()
     watermark = request.form.get("watermark", "@meucanal").strip()
+    keep_audio = request.form.get("keep_audio", "0").strip() in ("1", "true", "on")
     if not video_url:
         return jsonify({"error": "URL is required"}), 400
 
@@ -286,7 +303,7 @@ def process():
     os.makedirs(job_dir, exist_ok=True)
 
     jobs[job_id] = {"status": "pending"}
-    threading.Thread(target=do_process, args=(job_id, video_url, watermark)).start()
+    threading.Thread(target=do_process, args=(job_id, video_url, watermark, keep_audio)).start()
     return jsonify({"job_id": job_id}), 202
 
 

@@ -461,6 +461,14 @@
     <label>Watermark <span>*</span></label>
     <input type="text" id="watermarkInput" value="@umortadela" />
 
+    <div style="display:flex; align-items:center; gap:10px; margin-top:14px;">
+      <label class="switch">
+        <input type="checkbox" id="keepAudioInput">
+        <span class="slider"></span>
+      </label>
+      <span>Manter áudio do vídeo</span>
+    </div>
+
     <button id="processBtn" onclick="startProcess()">⚙️ Processar Vídeo</button>
 
     <div id="status"></div>
@@ -545,6 +553,7 @@
     async function startProcess() {
       const url = document.getElementById("urlInput").value.trim();
       const watermark = document.getElementById("watermarkInput").value.trim();
+      const keepAudio = document.getElementById("keepAudioInput").checked;
       const btn = document.getElementById("processBtn");
 
       if (!url) return showStatus("Cole uma URL válida do TikTok.", "error");
@@ -556,6 +565,7 @@
       const form = new FormData();
       form.append("url", url);
       form.append("watermark", watermark || "@umortadela");
+      form.append("keep_audio", keepAudio ? "1" : "0");
 
       try {
         const res = await fetch(`${API}/process`, { method: "POST", body: form });
