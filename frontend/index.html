@@ -459,7 +459,7 @@
     <input type="text" id="urlInput" placeholder="https://www.tiktok.com/@user/video/..." />
 
     <label>Watermark <span>*</span></label>
-    <input type="text" id="watermarkInput" value="@achadinhosgala" />
+    <input type="text" id="watermarkInput" value="@umortadela" />
 
     <button id="processBtn" onclick="startProcess()">⚙️ Processar Vídeo</button>
 
@@ -555,7 +555,7 @@
 
       const form = new FormData();
       form.append("url", url);
-      form.append("watermark", watermark || "@achadinhosgala");
+      form.append("watermark", watermark || "@umortadela");
 
       try {
         const res = await fetch(`${API}/process`, { method: "POST", body: form });
