@@ -4,8 +4,7 @@
 cat > /usr/share/nginx/html/config.js << EOF
 // Configurações do frontend - gerado dinamicamente
 window.APP_CONFIG = {
-  API: "${VITE_API_URL:-http://localhost:5001}",
-  EXTRACT_API: "${VITE_EXTRACT_API_URL:-http://localhost:5001}"
+  API: "${VITE_API_URL:-http://localhost:5001}"
 };
 EOF
 

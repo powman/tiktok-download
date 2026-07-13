@@ -13,6 +13,8 @@ WORK_DIR = "/downloads"
 os.makedirs(WORK_DIR, exist_ok=True)
 jobs = {}
 
+CAPA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "capa.png")
+
 PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "http://localhost:5001").rstrip("/")
 HISTORY_DB = os.path.join(WORK_DIR, "history.db")
 
@@ -131,7 +133,7 @@ def save_history(title, description, video_url):
         )
 
 
-def build_filter_complex(has_reaction, watermark_text, speed_factor=0.98, fps=29.970):
+def build_filter_complex(watermark_text, speed_factor=0.98, fps=29.970):
     """
     Constrói filter complex com técnicas anti-detecção:
     - Velocidade alterada
@@ -141,25 +143,25 @@ def build_filter_complex(has_reaction, watermark_text, speed_factor=0.98, fps=29
     - Shift de matiz
     """
     wm = watermark_text.replace("'", "\\'")
-    
+
     # Velocidade alterada via setpts
     speed_filter = f"setpts=PTS/{speed_factor},"
-    
+
     # FPS não-padrão para quebrar fingerprints temporais
     fps_filter = f"fps=fps={fps},"
-    
+
     # Ajustes de cor sutis (brightness, contrast, saturation, gamma)
     color_adjust = "eq=brightness=0.03:contrast=1.03:saturation=0.98:gamma=1.01"
-    
+
     # Unsharp para alterar nitidez
     unsharp = "unsharp=luma_msize_x=3:luma_msize_y=3:luma_amount=0.5"
-    
+
     # Ruído invisível que quebra hash visual
     noise = "noise=alls=3:allf=t+u"
-    
+
     # Shift mínimo de matiz
     hue = "hue=h=0.5"
-    
+
     # Drawtext com velocidade alterada e cores invertidas (branco com borda preta)
     drawtext = (
         f"drawtext=text='{wm}':fontsize=32:fontcolor=white:borderw=3:"
@@ -167,31 +169,21 @@ def build_filter_complex(has_reaction, watermark_text, speed_factor=0.98, fps=29
         f"y='abs(mod(t*{int(240*speed_factor)}\,2*(H-th))-(H-th))'"
     )
 
-    # Pillarbox Blur com parâmetros alterados
+    # Vídeo preenchendo a tela (sem pillarbox blur) + merge da capa.png por cima
     base_filter = (
-        f"[0:v]{speed_filter}{fps_filter}format=yuv420p,split[main][blur];"
-        "[blur]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,"
-        "gblur=sigma=30,eq=brightness=-0.28:contrast=0.98[bg];"
-        "[main]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:810,"
-        f"{color_adjust},{unsharp}[fg];"
-        "[bg][fg]overlay=(W-w)/2:(H-h)/2[composited];"
+        f"[0:v]{speed_filter}{fps_filter}format=yuv420p,"
+        "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,"
+        f"{color_adjust},{unsharp}[main];"
+        "[main][1:v]overlay=0:0[composited];"
     )
 
-    if has_reaction:
-        return (
-            base_filter +
-            f"[composited]{drawtext}[watermarked];"
-            "[watermarked][1:v]overlay=W-w-60:H-h-60:enable='between(t,0,20)',"
-            f"{noise},{hue}[final]"
-        )
-    else:
-        return (
-            base_filter +
-            f"[composited]{drawtext},{noise},{hue}[final]"
-        )
+    return (
+        base_filter +
+        f"[composited]{drawtext},{noise},{hue}[final]"
+    )
 
 
-def do_process(job_id, video_url, reaction_path, watermark_text):
+def do_process(job_id, video_url, watermark_text):
     temp_video = os.path.join(WORK_DIR, f"{job_id}_temp.mp4")
     temp_processed = os.path.join(WORK_DIR, f"{job_id}_processed.mp4")
     output_path = os.path.join(WORK_DIR, f"{job_id}_final.mp4")
@@ -206,22 +198,19 @@ def do_process(job_id, video_url, reaction_path, watermark_text):
         caption = metadata["description"]
 
         jobs[job_id] = {"status": "processing"}
-        has_reaction = reaction_path and os.path.exists(reaction_path)
-        
+
         # Metadados aleatórios para primeiro passo
         titles = ["Content Creator", "Original Video", "Creator Hub", "Video Studio", "Media Lab"]
         artists = ["CreatorName", "StudioX", "ContentMaker", "VideoArtist", "MediaPro"]
-        
+
         # PRIMEIRO PASSO: Aplica todas as transformações visuais
         filter_complex_pass1 = build_filter_complex(
-            has_reaction, watermark_text, 
+            watermark_text,
             speed_factor=0.98, fps=29.970
         )
-        
-        cmd_pass1 = ["ffmpeg", "-y", "-i", temp_video]
-        if has_reaction:
-            cmd_pass1 += ["-i", reaction_path]
-        
+
+        cmd_pass1 = ["ffmpeg", "-y", "-i", temp_video, "-loop", "1", "-i", CAPA_PATH]
+
         # Corte de 0.5s no início, duração 59s (quebra hash de duração)
         cmd_pass1 += [
             "-ss", "00:00:00.5",
@@ -296,14 +285,8 @@ def process():
     job_dir = os.path.join(WORK_DIR, job_id)
     os.makedirs(job_dir, exist_ok=True)
 
-    reaction_path = None
-    reaction_file = request.files.get("reaction")
-    if reaction_file and reaction_file.filename:
-        reaction_path = os.path.join(job_dir, "reaction.mp4")
-        reaction_file.save(reaction_path)
-
     jobs[job_id] = {"status": "pending"}
-    threading.Thread(target=do_process, args=(job_id, video_url, reaction_path, watermark)).start()
+    threading.Thread(target=do_process, args=(job_id, video_url, watermark)).start()
     return jsonify({"job_id": job_id}), 202
 
 
@@ -334,54 +317,6 @@ def serve_video(job_id):
         return jsonify({"error": "Vídeo não encontrado"}), 404
 
     return send_file(path, mimetype="video/mp4")
-
-
-@app.route("/extract-info", methods=["POST"])
-def extract_info():
-    if request.is_json:
-        video_url = request.json.get("url", "").strip()
-    else:
-        video_url = request.form.get("url", "").strip()
-    
-    if not video_url:
-        return jsonify({"error": "URL is required"}), 400
-    
-    try:
-        # Usa --dump-json para pegar TODOS os metadados de uma vez
-        result = subprocess.run(
-            ["yt-dlp", "--no-update", "--dump-json", "--quiet", video_url],
-            capture_output=True, text=True, timeout=30
-        )
-        
-        if result.returncode != 0:
-            return jsonify({"error": result.stderr.strip()}), 500
-        
-        import json
-        data = json.loads(result.stdout.strip().split('\n')[0])  # pega primeiro JSON se houver múltiplos
-        
-        # Campos relevantes para TikTok/YouTube
-        title = data.get("title", "")
-        description = data.get("description", "")
-        uploader = data.get("uploader", data.get("channel", ""))
-        duration = data.get("duration", 0)
-        thumbnail = data.get("thumbnail", "")
-        
-        # Fallback: se description vazia, tenta usar title (TikTok coloca caption no title às vezes)
-        if not description and title:
-            description = title
-        
-        return jsonify({
-            "title": title,
-            "description": description,
-            "uploader": uploader,
-            "duration": duration,
-            "thumbnail": thumbnail
-        })
-        
-    except subprocess.TimeoutExpired:
-        return jsonify({"error": "Timeout ao extrair informações"}), 504
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 
 SORT_COLUMNS = {

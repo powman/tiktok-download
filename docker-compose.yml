@@ -25,7 +25,6 @@ services:
       - "8082:80"
     environment:
       - VITE_API_URL=${VITE_API_URL:-http://localhost:5001}
-      - VITE_EXTRACT_API_URL=${VITE_EXTRACT_API_URL:-http://localhost:5001}
     depends_on:
       - backend
     container_name: tiktok-frontend

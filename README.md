@@ -13,7 +13,6 @@ Download de vídeos do TikTok com processamento de vídeo via interface web usan
 
 - **Download**: Baixa vídeos do TikTok/YouTube via yt-dlp
 - **Processamento**: Aplica filtros de vídeo (escala, overlay, watermark)
-- **Reação**: Suporta adicionar vídeo de reação em overlay
 - **Extração**: Extrai metadados (título, descrição, autor, duração)
 
 ## 🚀 Quick Start
@@ -60,7 +59,6 @@ Processa um vídeo
 **Parâmetros:**
 - `url` (string) - URL do vídeo
 - `watermark` (string) - Texto da marca d'água
-- `reaction` (file) - Arquivo de reação (opcional)
 
 **Resposta:**
 ```json
@@ -85,23 +83,6 @@ Status da tarefa
 ### `GET /file/<job_id>`
 Download do arquivo processado
 
-### `POST /extract-info`
-Extrai metadados do vídeo
-
-**Parâmetros:**
-- `url` (string) - URL do vídeo
-
-**Resposta:**
-```json
-{
-  "title": "...",
-  "description": "...",
-  "uploader": "...",
-  "duration": 123,
-  "thumbnail": "url"
-}
-```
-
 
 ## ⚙️ Configuração
 
@@ -112,7 +93,6 @@ No arquivo `.env` (copie de `.env.example`), você pode configurar:
 | Variável | Descrição | Padrão |
 |----------|-----------|--------|
 | `VITE_API_URL` | URL da API para o frontend | `http://localhost:5000` |
-| `VITE_EXTRACT_API_URL` | URL para extração de metadados | `http://localhost:5000` |
 | `CORS_ORIGINS` | Origins permitidos | `http://localhost:8082` |
 
 ### Portas

@@ -49,3 +49,4 @@ backend/credentials/
 # OS
 .DS_Store
 Thumbs.db
+.playwright-mcp
