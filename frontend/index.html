@@ -735,12 +735,14 @@
               <div class="editable-field">
                 <span class="field-text" id="title-${item.id}">${escapeHtml(item.title) || "<span style=color:#666>Sem título</span>"}</span>
                 <button class="edit-icon" title="Editar título" onclick="openEditModal(${item.id}, 'title')">✏️</button>
+                <button class="edit-icon" title="Copiar título" onclick="copyField(${item.id}, 'title')">📋</button>
               </div>
             </td>
             <td class="col-text" data-label="Texto">
               <div class="editable-field">
                 <div class="desc-clamp" id="desc-${item.id}">${escapeHtml(item.description) || "<span style=color:#666>Sem descrição</span>"}</div>
                 <button class="edit-icon" title="Editar descrição" onclick="openEditModal(${item.id}, 'description')">✏️</button>
+                <button class="edit-icon" title="Copiar texto" onclick="copyField(${item.id}, 'description')">📋</button>
               </div>
               <button class="ver-mais" id="vermais-${item.id}" onclick="toggleDescription(${item.id})">Ver mais</button>
             </td>
@@ -778,6 +780,14 @@
 
     function copyVideoUrl(btn) {
       navigator.clipboard.writeText(btn.dataset.url).then(() => alert("Link copiado!"));
+    }
+
+    function copyField(id, field) {
+      const item = historyItems[id];
+      if (!item) return;
+      const text = item[field] || "";
+      const label = field === "title" ? "Título" : "Texto";
+      navigator.clipboard.writeText(text).then(() => alert(`${label} copiado!`));
     }
 
     async function shareToTikTok(btn) {
